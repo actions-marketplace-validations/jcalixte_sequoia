@@ -26,6 +26,7 @@
 		"@clack/prompts": "^1.0.0",
 		"cmd-ts": "^0.14.3",
 		"glob": "^13.0.0",
+		"lande": "^1.0.10",
 		"mime-types": "^2.1.35",
 		"minimatch": "^10.1.1"
 	},
