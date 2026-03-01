@@ -46,7 +46,7 @@ export async function findConfig(
 }
 
 export async function loadConfig(
-	configPath?: string,
+	configPath: string | null,
 ): Promise<{ config: RemansoConfig; configPath: string }> {
 	const resolvedPath = configPath || (await findConfig());
 

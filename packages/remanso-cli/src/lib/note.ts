@@ -3,6 +3,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import mimeTypes from "mime-types";
 import type { BlogPost, BlobObject } from "../../../cli/src/lib/types";
+import { detectLanguage } from "./detect-languages";
 
 const LEXICON = "space.remanso.note";
 const MAX_CONTENT = 10000;
@@ -201,13 +202,15 @@ async function buildNoteRecord(
 	const title = titleMatch ? titleMatch[1] : post.frontmatter.title;
 
 	const { content, images } = await processNoteContent(agent, post, options);
+	const slicedContent = content.slice(0, MAX_CONTENT);
 
 	const record: Record<string, unknown> = {
 		$type: LEXICON,
 		title,
-		content: content.slice(0, MAX_CONTENT),
+		content: slicedContent,
 		createdAt: publishDate,
 		publishedAt: publishDate,
+		language: detectLanguage(title || slicedContent),
 	};
 
 	if (images.length > 0) {
