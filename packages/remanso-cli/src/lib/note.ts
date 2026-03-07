@@ -7,6 +7,7 @@ import { detectLanguage } from "./detect-languages";
 
 const LEXICON = "space.remanso.note";
 const MAX_CONTENT = 10000;
+const MIN_CONTENT_FOR_TRANSLATION = 400;
 
 interface ImageRecord {
 	image: BlobObject;
@@ -210,7 +211,9 @@ async function buildNoteRecord(
 		content: slicedContent,
 		createdAt: publishDate,
 		publishedAt: publishDate,
-		language: detectLanguage(title || slicedContent),
+		language: detectLanguage(
+			slicedContent.slice(0, MIN_CONTENT_FOR_TRANSLATION),
+		),
 	};
 
 	if (images.length > 0) {
