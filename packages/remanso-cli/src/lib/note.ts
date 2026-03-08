@@ -6,7 +6,7 @@ import type { BlogPost, BlobObject } from "../../../cli/src/lib/types";
 import { detectLanguage } from "./detect-languages";
 
 const LEXICON = "space.remanso.note";
-const MAX_CONTENT = 10000;
+const MAX_CONTENT = 30000;
 const MIN_CONTENT_FOR_TRANSLATION = 400;
 
 interface ImageRecord {
