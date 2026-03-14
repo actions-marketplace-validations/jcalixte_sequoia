@@ -6,6 +6,11 @@ import type { BlogPost, BlobObject } from "../../../cli/src/lib/types";
 import { detectLanguage } from "./detect-languages";
 
 const LEXICON = "space.remanso.note";
+
+function toISODate(value: string | undefined): string {
+	const d = new Date(value ?? "");
+	return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
 const MAX_CONTENT = 30000;
 const MIN_CONTENT_FOR_TRANSLATION = 400;
 
@@ -197,7 +202,7 @@ async function buildNoteRecord(
 	post: BlogPost,
 	options: NoteOptions,
 ): Promise<Record<string, unknown>> {
-	const publishDate = new Date(post.frontmatter.publishDate).toISOString();
+	const publishDate = toISODate(post.frontmatter.publishDate);
 	const trimmedContent = post.content.trim();
 	const titleMatch = trimmedContent.match(/^# (.+)$/m);
 	const title = titleMatch ? titleMatch[1] : post.frontmatter.title;

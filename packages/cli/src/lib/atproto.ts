@@ -245,7 +245,8 @@ export async function createDocument(
 	config: PublisherConfig,
 	coverImage?: BlobObject,
 ): Promise<string> {
-	const publishDate = new Date(post.frontmatter.publishDate);
+	const _d = new Date(post.frontmatter.publishDate ?? "");
+	const publishDate = isNaN(_d.getTime()) ? new Date() : _d;
 	const trimmedContent = post.content.trim();
 	const textContent = getTextContent(post, config.textContentField);
 	const titleMatch = trimmedContent.match(/^# (.+)$/m);
@@ -323,7 +324,8 @@ export async function updateDocument(
 		.pop()!
 		.replace(/\.pub$/, "");
 	const finalPath = `/pub/${rkey}/${slugName}`;
-	const publishDate = new Date(post.frontmatter.publishDate);
+	const _d = new Date(post.frontmatter.publishDate ?? "");
+	const publishDate = isNaN(_d.getTime()) ? new Date() : _d;
 	const trimmedContent = post.content.trim();
 	const textContent = getTextContent(post, config.textContentField);
 	const titleMatch = trimmedContent.match(/^# (.+)$/m);
