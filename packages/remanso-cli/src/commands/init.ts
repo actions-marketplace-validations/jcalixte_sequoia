@@ -29,7 +29,7 @@ import { exitOnCancel } from "../../../cli/src/lib/prompts";
 import type { RemansoConfig } from "../lib/config";
 import { WORKFLOW_YAML } from "./github";
 
-const CONFIG_FILENAME = "remanso.json";
+const CONFIG_FILENAME = ".remanso.json";
 const STATE_FILENAME = ".remanso-state.json";
 const WORKFLOW_PATH = ".github/workflows/remanso.yml";
 
@@ -344,7 +344,7 @@ export const initCommand = command({
 			config.pdsUrl = pdsUrl;
 		}
 
-		const configContent = JSON.stringify(config, null, 2);
+		const configContent = JSON.stringify({ atmosphere: config }, null, 2);
 		await fs.writeFile(CONFIG_FILENAME, configContent);
 		log.success(`Created ${CONFIG_FILENAME}`);
 

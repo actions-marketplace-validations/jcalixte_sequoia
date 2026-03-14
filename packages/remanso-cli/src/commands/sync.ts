@@ -137,7 +137,7 @@ export const syncCommand = command({
 		// Load config
 		const configPath = await findConfig();
 		if (!configPath) {
-			log.error("No remanso.json found. Run 'remanso init' first.");
+			log.error("No .remanso.json found. Run 'remanso init' first.");
 			process.exit(1);
 		}
 

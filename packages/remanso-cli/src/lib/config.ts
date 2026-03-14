@@ -11,7 +11,11 @@ export interface RemansoConfig {
 	imagesDir?: string;
 }
 
-const CONFIG_FILENAME = "remanso.json";
+interface RemansoConfigFile {
+	atmosphere: RemansoConfig;
+}
+
+const CONFIG_FILENAME = ".remanso.json";
 const STATE_FILENAME = ".remanso-state.json";
 
 export const DEFAULT_IGNORE = ["**/node_modules/**", ".*/**", "_*/**"];
@@ -58,7 +62,14 @@ export async function loadConfig(
 
 	try {
 		const content = await fs.readFile(resolvedPath, "utf-8");
-		const config = JSON.parse(content) as RemansoConfig;
+		const parsed = JSON.parse(content) as RemansoConfigFile;
+
+		if (!parsed.atmosphere)
+			throw new Error(
+				`Invalid config: missing "atmosphere" key in ${resolvedPath}`,
+			);
+
+		const config = parsed.atmosphere;
 
 		if (!config.contentDir) throw new Error("contentDir is required in config");
 		if (!config.publicationUri)
