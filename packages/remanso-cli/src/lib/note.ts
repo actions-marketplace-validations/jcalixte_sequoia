@@ -86,7 +86,9 @@ async function uploadBlob(
 				mimeType,
 				size: imageBuffer.byteLength,
 			};
-		} catch {}
+		} catch (error) {
+			console.error(`Error uploading blob ${filePath}:`, error);
+		}
 	}
 	return undefined;
 }
@@ -120,7 +122,10 @@ async function processImages(
 				imagesDir,
 			);
 			blob = await uploadBlob(agent, candidates);
-			if (!blob) continue;
+			if (!blob) {
+				console.warn(`Could not upload image: ${src} (checked: ${candidates.join(", ")})`);
+				continue;
+			}
 			uploadCache.set(src, blob);
 		}
 
