@@ -15,19 +15,20 @@ import {
 } from "@clack/prompts";
 import { AtpAgent } from "@atproto/api";
 import {
-	resolveHandleToPDS,
-	createPublication,
 	createAgent,
-} from "../../../cli/src/lib/atproto";
+	createPublication,
+	resolveHandleToPDS,
+} from "../../../cli/src/lib/atproto.ts";
 import {
-	loadCredentials,
-	saveCredentials,
 	getCredentials,
 	listCredentials,
-} from "../../../cli/src/lib/credentials";
-import { exitOnCancel } from "../../../cli/src/lib/prompts";
-import type { RemansoConfig } from "../lib/config";
-import { WORKFLOW_YAML } from "./github";
+	loadCredentials,
+	saveCredentials,
+} from "../../../cli/src/lib/credentials.ts";
+import { exitOnCancel } from "../../../cli/src/lib/prompts.ts";
+import type { RemansoConfig } from "../lib/config.ts";
+import { WORKFLOW_YAML } from "./github.ts";
+import process from "node:process";
 
 const CONFIG_FILENAME = ".remanso.json";
 const STATE_FILENAME = ".remanso-state.json";
@@ -99,11 +100,6 @@ async function listPublications(
 
 	return results;
 }
-
-const onCancel = () => {
-	outro("Setup cancelled");
-	process.exit(0);
-};
 
 export const initCommand = command({
 	name: "init",

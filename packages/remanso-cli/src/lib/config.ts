@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { PublisherState } from "../../../cli/src/lib/types";
+import type { PublisherState } from "../../../cli/src/lib/types.ts";
+import process from "node:process";
 
 export interface RemansoConfig {
 	contentDir: string;
@@ -64,16 +65,18 @@ export async function loadConfig(
 		const content = await fs.readFile(resolvedPath, "utf-8");
 		const parsed = JSON.parse(content) as RemansoConfigFile;
 
-		if (!parsed.atmosphere)
+		if (!parsed.atmosphere) {
 			throw new Error(
 				`Invalid config: missing "atmosphere" key in ${resolvedPath}`,
 			);
+		}
 
 		const config = parsed.atmosphere;
 
 		if (!config.contentDir) throw new Error("contentDir is required in config");
-		if (!config.publicationUri)
+		if (!config.publicationUri) {
 			throw new Error("publicationUri is required in config");
+		}
 
 		return { config, configPath: resolvedPath };
 	} catch (error) {

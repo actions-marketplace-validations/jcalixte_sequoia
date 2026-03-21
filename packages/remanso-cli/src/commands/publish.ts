@@ -2,42 +2,43 @@ import * as fs from "node:fs/promises";
 import { command, flag } from "cmd-ts";
 import { log, spinner } from "@clack/prompts";
 import * as path from "node:path";
-import { findConfig, loadConfig, loadState, saveState } from "../lib/config";
+import { findConfig, loadConfig, loadState, saveState } from "../lib/config.ts";
 import {
-	loadCredentials,
-	listAllCredentials,
 	getCredentials,
-} from "../../../cli/src/lib/credentials";
+	listAllCredentials,
+	loadCredentials,
+} from "../../../cli/src/lib/credentials.ts";
 import {
 	createAgent,
 	createDocument,
-	updateDocument,
-	uploadImage,
-	resolveImagePath,
 	deleteRecord,
 	listDocuments,
 	parseAtUri,
-} from "../../../cli/src/lib/atproto";
+	resolveImagePath,
+	updateDocument,
+	uploadImage,
+} from "../../../cli/src/lib/atproto.ts";
 import {
-	scanContentDirectory,
-	getContentHash,
-	updateFrontmatterWithAtUri,
-	slugifyTitle,
 	computeNoteHash,
-} from "../../../cli/src/lib/markdown";
+	getContentHash,
+	scanContentDirectory,
+	slugifyTitle,
+	updateFrontmatterWithAtUri,
+} from "../../../cli/src/lib/markdown.ts";
 import type {
-	BlogPost,
-	BlobObject,
 	AppPasswordCredentials,
-} from "../../../cli/src/lib/types";
-import { exitOnCancel } from "../../../cli/src/lib/prompts";
+	BlobObject,
+	BlogPost,
+} from "../../../cli/src/lib/types.ts";
+import { exitOnCancel } from "../../../cli/src/lib/prompts.ts";
 import {
 	createNote,
-	updateNote,
 	deleteNote,
 	findPostsWithStaleLinks,
 	type NoteOptions,
-} from "../lib/note";
+	updateNote,
+} from "../lib/note.ts";
+import process from "node:process";
 
 async function fileExists(filePath: string): Promise<boolean> {
 	try {
@@ -115,8 +116,9 @@ export const publishCommand = command({
 			process.exit(1);
 		}
 
-		const { config, configPath: resolvedConfigPath } =
-			await loadConfig(configPath);
+		const { config, configPath: resolvedConfigPath } = await loadConfig(
+			configPath,
+		);
 		const configDir = path.dirname(resolvedConfigPath);
 
 		log.info(`Content directory: ${config.contentDir}`);
@@ -262,7 +264,9 @@ export const publishCommand = command({
 
 		if (draftPosts.length > 0) {
 			log.info(
-				`Skipping ${draftPosts.length} draft note${draftPosts.length === 1 ? "" : "s"}`,
+				`Skipping ${draftPosts.length} draft note${
+					draftPosts.length === 1 ? "" : "s"
+				}`,
 			);
 		}
 
@@ -385,7 +389,14 @@ export const publishCommand = command({
 			updateNote: boolean;
 		}> = [];
 
-		for (const { post, action, updateDocument: shouldUpdateDoc, updateNote: shouldUpdateNote } of postsToPublish) {
+		for (
+			const {
+				post,
+				action,
+				updateDocument: shouldUpdateDoc,
+				updateNote: shouldUpdateNote,
+			} of postsToPublish
+		) {
 			const trimmedContent = post.content.trim();
 			const titleMatch = trimmedContent.match(/^# (.+)$/m);
 			const title = titleMatch ? titleMatch[1] : post.frontmatter.title;
@@ -474,8 +485,9 @@ export const publishCommand = command({
 
 				noteQueue.push({ post, action, atUri, updateNote: shouldUpdateNote });
 			} catch (error) {
-				const errorMessage =
-					error instanceof Error ? error.message : String(error);
+				const errorMessage = error instanceof Error
+					? error.message
+					: String(error);
 				s.stop(`Error publishing "${path.basename(post.filePath)}"`);
 				log.error(`  ${errorMessage}`);
 				errorCount++;
@@ -483,7 +495,9 @@ export const publishCommand = command({
 		}
 
 		// Pass 2: Create/update Remanso notes
-		for (const { post, action, atUri, updateNote: shouldUpdateNote } of noteQueue) {
+		for (
+			const { post, action, atUri, updateNote: shouldUpdateNote } of noteQueue
+		) {
 			if (!shouldUpdateNote && action !== "create") continue;
 			const relativeFilePath = path.relative(configDir, post.filePath);
 			try {
@@ -499,7 +513,9 @@ export const publishCommand = command({
 				}
 			} catch (error) {
 				log.warn(
-					`Failed to create note for "${post.frontmatter.title}": ${error instanceof Error ? error.message : String(error)}`,
+					`Failed to create note for "${post.frontmatter.title}": ${
+						error instanceof Error ? error.message : String(error)
+					}`,
 				);
 			}
 		}

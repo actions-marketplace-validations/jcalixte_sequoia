@@ -2,24 +2,28 @@ import * as fs from "node:fs/promises";
 import { command, flag } from "cmd-ts";
 import { log, spinner } from "@clack/prompts";
 import * as path from "node:path";
-import { findConfig, loadConfig, loadState, saveState } from "../lib/config";
+import { findConfig, loadConfig, loadState, saveState } from "../lib/config.ts";
 import {
-	loadCredentials,
-	listAllCredentials,
 	getCredentials,
-} from "../../../cli/src/lib/credentials";
+	listAllCredentials,
+	loadCredentials,
+} from "../../../cli/src/lib/credentials.ts";
 import type { Agent } from "@atproto/api";
-import { createAgent, listDocuments } from "../../../cli/src/lib/atproto";
-import type { ListDocumentsResult } from "../../../cli/src/lib/atproto";
-import type { BlogPost, AppPasswordCredentials } from "../../../cli/src/lib/types";
+import { createAgent, listDocuments } from "../../../cli/src/lib/atproto.ts";
+import type { ListDocumentsResult } from "../../../cli/src/lib/atproto.ts";
+import type {
+	AppPasswordCredentials,
+	BlogPost,
+} from "../../../cli/src/lib/types.ts";
 import {
-	scanContentDirectory,
+	computeNoteHash,
 	getContentHash,
 	getTextContent,
+	scanContentDirectory,
 	updateFrontmatterWithAtUri,
-	computeNoteHash,
-} from "../../../cli/src/lib/markdown";
-import { exitOnCancel } from "../../../cli/src/lib/prompts";
+} from "../../../cli/src/lib/markdown.ts";
+import { exitOnCancel } from "../../../cli/src/lib/prompts.ts";
+import process from "node:process";
 
 async function matchesPDS(
 	localPost: BlogPost,
@@ -62,7 +66,8 @@ async function matchesPDS(
 			});
 			const noteValue = noteResponse.data.value as Record<string, unknown>;
 			const localDiscoverable = localPost.frontmatter.discoverable ?? true;
-			const noteDiscoverable = (noteValue.discoverable as boolean | undefined) ?? true;
+			const noteDiscoverable =
+				(noteValue.discoverable as boolean | undefined) ?? true;
 			if (
 				(localPost.frontmatter.theme || undefined) !==
 					(noteValue.theme as string | undefined) ||
@@ -156,8 +161,9 @@ export const syncCommand = command({
 			process.exit(1);
 		}
 
-		const { config, configPath: resolvedConfigPath } =
-			await loadConfig(configPath);
+		const { config, configPath: resolvedConfigPath } = await loadConfig(
+			configPath,
+		);
 		const configDir = path.dirname(resolvedConfigPath);
 
 		log.info(`Publication: ${config.publicationUri}`);
@@ -183,7 +189,9 @@ export const syncCommand = command({
 
 		// Create agent
 		const s = spinner();
-		s.start(`Connecting as ${(credentials as AppPasswordCredentials).pdsUrl}...`);
+		s.start(
+			`Connecting as ${(credentials as AppPasswordCredentials).pdsUrl}...`,
+		);
 		let agent: Awaited<ReturnType<typeof createAgent>> | undefined;
 		try {
 			agent = await createAgent(credentials);
@@ -214,9 +222,7 @@ export const syncCommand = command({
 		const allScanned = await scanContentDirectory(contentDir, {
 			ignorePatterns: config.ignore,
 		});
-		const localPosts = allScanned.filter((p) =>
-			p.filePath.endsWith(".pub.md"),
-		);
+		const localPosts = allScanned.filter((p) => p.filePath.endsWith(".pub.md"));
 		s.stop(`Found ${localPosts.length} publishable notes (.pub.md)`);
 
 		// Build a map from atUri -> local post for matching
@@ -255,9 +261,7 @@ export const syncCommand = command({
 					contentHash: contentMatchesPDS
 						? await getContentHash(localPost.rawContent)
 						: "",
-					noteHash: contentMatchesPDS
-						? await computeNoteHash(localPost)
-						: "",
+					noteHash: contentMatchesPDS ? await computeNoteHash(localPost) : "",
 					atUri: doc.uri,
 					lastPublished: doc.value.publishedAt,
 				};
