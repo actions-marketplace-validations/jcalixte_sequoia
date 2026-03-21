@@ -124,6 +124,7 @@ export interface PublisherState {
 
 export interface PostState {
 	contentHash: string;
+	noteHash?: string; // hash of note-effective fields (content[0:30000], theme, etc.)
 	atUri?: string;
 	lastPublished?: string;
 	slug?: string; // The generated slug for this post (used by inject command)

@@ -17,6 +17,7 @@ import {
 	getContentHash,
 	getTextContent,
 	updateFrontmatterWithAtUri,
+	computeNoteHash,
 } from "../../../cli/src/lib/markdown";
 import { exitOnCancel } from "../../../cli/src/lib/prompts";
 
@@ -48,7 +49,7 @@ async function matchesPDS(
 		return false;
 	}
 
-	// Compare note-specific fields: theme, fontSize, fontFamily
+	// Compare note-specific fields: theme, fontSize, fontFamily, and body content
 	const noteUriMatch = doc.uri.match(/^at:\/\/([^/]+)\/[^/]+\/(.+)$/);
 	if (noteUriMatch) {
 		const repo = noteUriMatch[1]!;
@@ -70,6 +71,20 @@ async function matchesPDS(
 				(localPost.frontmatter.fontFamily || undefined) !==
 					(noteValue.fontFamily as string | undefined) ||
 				localDiscoverable !== noteDiscoverable
+			) {
+				return false;
+			}
+
+			// Compare note body content up to 5000 chars.
+			// Beyond that, image paths are transformed to blob links in PDS,
+			// making direct comparison unreliable without re-uploading images.
+			const pdsNoteContent = (noteValue.content as string | undefined) ?? "";
+			const localNoteContent = localPost.content.trim();
+			const compareLength = Math.min(localNoteContent.length, 5000);
+			if (
+				compareLength > 0 &&
+				pdsNoteContent.slice(0, compareLength) !==
+					localNoteContent.slice(0, compareLength)
 			) {
 				return false;
 			}
@@ -235,12 +250,14 @@ export const syncCommand = command({
 				log.message(`    File: ${path.basename(localPost.filePath)}`);
 
 				const contentMatchesPDS = await matchesPDS(localPost, doc, agent);
-				const contentHash = contentMatchesPDS
-					? await getContentHash(localPost.rawContent)
-					: "";
 				const relativeFilePath = path.relative(configDir, localPost.filePath);
 				state.posts[relativeFilePath] = {
-					contentHash,
+					contentHash: contentMatchesPDS
+						? await getContentHash(localPost.rawContent)
+						: "",
+					noteHash: contentMatchesPDS
+						? await computeNoteHash(localPost)
+						: "",
 					atUri: doc.uri,
 					lastPublished: doc.value.publishedAt,
 				};

@@ -23,6 +23,7 @@ import {
 	getContentHash,
 	updateFrontmatterWithAtUri,
 	slugifyTitle,
+	computeNoteHash,
 } from "../../../cli/src/lib/markdown";
 import type {
 	BlogPost,
@@ -207,6 +208,8 @@ export const publishCommand = command({
 			post: BlogPost;
 			action: "create" | "update";
 			reason: "content changed" | "forced" | "new post" | "missing state";
+			updateDocument: boolean;
+			updateNote: boolean;
 		}> = [];
 		const draftPosts: BlogPost[] = [];
 
@@ -216,7 +219,6 @@ export const publishCommand = command({
 				continue;
 			}
 
-			const contentHash = await getContentHash(post.rawContent);
 			const relativeFilePath = path.relative(configDir, post.filePath);
 			const postState = state.posts[relativeFilePath];
 
@@ -225,19 +227,36 @@ export const publishCommand = command({
 					post,
 					action: post.frontmatter.atUri ? "update" : "create",
 					reason: "forced",
+					updateDocument: true,
+					updateNote: true,
 				});
 			} else if (!postState) {
 				postsToPublish.push({
 					post,
 					action: post.frontmatter.atUri ? "update" : "create",
 					reason: post.frontmatter.atUri ? "missing state" : "new post",
+					updateDocument: true,
+					updateNote: true,
 				});
-			} else if (postState.contentHash !== contentHash) {
-				postsToPublish.push({
-					post,
-					action: post.frontmatter.atUri ? "update" : "create",
-					reason: "content changed",
-				});
+			} else {
+				const contentHash = await getContentHash(post.rawContent);
+				const noteHash = await computeNoteHash(post);
+
+				const documentChanged = postState.contentHash !== contentHash;
+				// Treat absence of noteHash (legacy state) as changed so we populate it
+				const noteChanged = postState.noteHash
+					? postState.noteHash !== noteHash
+					: true;
+
+				if (documentChanged || noteChanged) {
+					postsToPublish.push({
+						post,
+						action: post.frontmatter.atUri ? "update" : "create",
+						reason: "content changed",
+						updateDocument: documentChanged,
+						updateNote: noteChanged,
+					});
+				}
 			}
 		}
 
@@ -363,9 +382,10 @@ export const publishCommand = command({
 			post: BlogPost;
 			action: "create" | "update";
 			atUri: string;
+			updateNote: boolean;
 		}> = [];
 
-		for (const { post, action } of postsToPublish) {
+		for (const { post, action, updateDocument: shouldUpdateDoc, updateNote: shouldUpdateNote } of postsToPublish) {
 			const trimmedContent = post.content.trim();
 			const titleMatch = trimmedContent.match(/^# (.+)$/m);
 			const title = titleMatch ? titleMatch[1] : post.frontmatter.title;
@@ -378,7 +398,7 @@ export const publishCommand = command({
 			}
 
 			try {
-				// Handle cover image upload
+				// Handle cover image upload (needed for both document and note)
 				let coverImage: BlobObject | undefined;
 				if (post.frontmatter.ogImage) {
 					const imagePath = await resolveImagePath(
@@ -424,29 +444,35 @@ export const publishCommand = command({
 					publishedCount++;
 				} else {
 					atUri = post.frontmatter.atUri!;
-					await updateDocument(
-						agent,
-						post,
-						atUri,
-						publisherConfig as Parameters<typeof updateDocument>[3],
-						coverImage,
-					);
+					if (shouldUpdateDoc) {
+						await updateDocument(
+							agent,
+							post,
+							atUri,
+							publisherConfig as Parameters<typeof updateDocument>[3],
+							coverImage,
+						);
+					}
 					s.stop(`Updated: ${atUri}`);
 
 					contentForHash = post.rawContent;
 					updatedCount++;
 				}
 
-				// Update state
+				// Update state — contentHash updated here (Pass 1 success)
+				// noteHash is updated separately in Pass 2 after note write succeeds
 				const contentHash = await getContentHash(contentForHash);
+				const existingState = state.posts[relativeFilePath];
 				state.posts[relativeFilePath] = {
 					contentHash,
+					// Preserve existing noteHash so Pass 2 can update it separately
+					noteHash: existingState?.noteHash,
 					atUri,
 					lastPublished: new Date().toISOString(),
 					slug: post.slug,
 				};
 
-				noteQueue.push({ post, action, atUri });
+				noteQueue.push({ post, action, atUri, updateNote: shouldUpdateNote });
 			} catch (error) {
 				const errorMessage =
 					error instanceof Error ? error.message : String(error);
@@ -457,12 +483,19 @@ export const publishCommand = command({
 		}
 
 		// Pass 2: Create/update Remanso notes
-		for (const { post, action, atUri } of noteQueue) {
+		for (const { post, action, atUri, updateNote: shouldUpdateNote } of noteQueue) {
+			if (!shouldUpdateNote && action !== "create") continue;
+			const relativeFilePath = path.relative(configDir, post.filePath);
 			try {
 				if (action === "create") {
 					await createNote(agent, post, atUri, context);
 				} else {
 					await updateNote(agent, post, atUri, context);
+				}
+				// Store noteHash only after the note record is successfully written
+				const noteHash = await computeNoteHash(post);
+				if (state.posts[relativeFilePath]) {
+					state.posts[relativeFilePath]!.noteHash = noteHash;
 				}
 			} catch (error) {
 				log.warn(

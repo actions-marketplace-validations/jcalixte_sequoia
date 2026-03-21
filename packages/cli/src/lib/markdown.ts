@@ -393,3 +393,16 @@ export function getTextContent(
 	}
 	return stripMarkdownForText(post.content);
 }
+
+const NOTE_CONTENT_MAX = 30000;
+
+export async function computeNoteHash(post: BlogPost): Promise<string> {
+	const key = [
+		post.content.trim().slice(0, NOTE_CONTENT_MAX),
+		post.frontmatter.theme ?? "",
+		String(post.frontmatter.fontSize ?? ""),
+		post.frontmatter.fontFamily ?? "",
+		String(post.frontmatter.discoverable ?? true),
+	].join("\0");
+	return getContentHash(key);
+}
